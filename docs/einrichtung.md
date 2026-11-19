@@ -16,7 +16,7 @@ Alle verwendeten Dienste haben einen dauerhaft kostenlosen Tarif. Prüfe die Kon
 2. Build-Befehl `npm ci && npm run build`, Ausgabeordner `apps/web/dist`.
 3. Optional Umgebungsvariablen `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` setzen (Stufe 1).
 
-**GitHub Pages:** Workflow `Deploy to GitHub Pages` manuell starten (im kostenlosen Tarif nur bei öffentlichem Repository). Secrets `SUPABASE_URL` und `SUPABASE_ANON_KEY` setzen, falls Stufe 1 genutzt wird.
+**GitHub Pages:** Workflow `Deploy to GitHub Pages` manuell starten (im kostenlosen Tarif nur bei öffentlichem Repository). Repository secret `PAGES_TOKEN` muss einen Token mit Berechtigung haben, Pages für das Repository zu aktivieren; der Workflow nutzt ihn beim Einrichten der Pages-Site. Secrets `SUPABASE_URL` und `SUPABASE_ANON_KEY` setzen, falls Stufe 1 genutzt wird.
 
 Die App nutzt Hash-Routing (`#/…`) und benötigt keine Server-Regeln. Nach dem ersten Besuch läuft sie offline (Service Worker). Am Handy: Browser-Menü → „Zum Startbildschirm hinzufügen“.
 

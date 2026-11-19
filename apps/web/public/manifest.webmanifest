@@ -1,0 +1,12 @@
+{
+  "name": "Flag Football Stats",
+  "short_name": "FF Stats",
+  "description": "Spielzüge erfassen, Live-Ticker und Auswertung für Flag Football",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101418",
+  "theme_color": "#0b5ed7",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

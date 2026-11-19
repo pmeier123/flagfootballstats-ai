@@ -1,0 +1,25 @@
+{
+  "name": "@ffs/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ffs/core": "*",
+    "@ffs/data": "*",
+    "qrcode-generator": "^1.4.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "vite": "^6.0.0"
+  }
+}

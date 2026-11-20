@@ -2,16 +2,17 @@
   import { onMount } from 'svelte';
   import {
     applyChange, canRecord, clearedDraft, computeScore, effectiveComments, effectivePlays, emptyDraft, evaluateDraft,
-    extraPointState, extraPointStateBefore, gameClock, periodLabel, playSentence, playSummary, pruneLineup,
+    extraPointState, extraPointStateBefore, gameClock, playSentence, playSummary, pruneLineup,
     sortPlayers, toPlayData, undoTarget,
-    type Draft, type GameEvent, type MarkerType, type Player, type TypistAssignment, type Unit, type Warning
+    type Draft, type GameEvent, type Player, type TypistAssignment, type Unit, type Warning
   } from '@ffs/core';
   import { app, engine, lookupPlayer, ownTeam, refreshLists, store, teamName } from '../lib/app.svelte';
   import { href } from '../lib/router.svelte';
-  import { occasionLabel } from '../lib/format';
+  import { playFieldLabel } from '../lib/format';
   import Dialog from '../components/Dialog.svelte';
   import PlayForm from '../components/PlayForm.svelte';
-  import SyncBadge from '../components/SyncBadge.svelte';
+  import PlayerMulti from '../components/PlayerMulti.svelte';
+  import PlayerSelect from '../components/PlayerSelect.svelte';
 
   let { gameId }: { gameId: string } = $props();
 
@@ -25,9 +26,11 @@
   let warnings = $state<Warning[]>([]);
   let lineupOpen = $state(false);
   let toast = $state('');
+  let toastTop = $state(false);
   let commentText = $state('');
   let commentFor = $state<string | null>(null);
   let showAll = $state(false);
+  const RECENT = 5;
 
   let game = $derived(app.games.find((g) => g.id === gameId));
   let plays = $derived(effectivePlays(events));
@@ -40,16 +43,15 @@
   let rosterPlayers = $derived(app.players.filter((p) => rosterIds.includes(p.id)));
   let lineupPlayers = $derived(evaluation.draft.lineup.map((id) => app.players.find((p) => p.id === id)).filter((p): p is Player => !!p));
   let permission = $derived(
-    game && app.user ? canRecord({ game, userId: app.user.id, role: app.user.role, assignments }) : { ok: false, reason: 'Nicht angemeldet' }
+    game && app.user ? canRecord({ game, userId: app.user.id, role: app.user.role, assignments }) : { ok: false, reason: 'Not signed in' }
   );
-  let lastPlay = $derived(plays[plays.length - 1]);
   let comments = $derived(effectiveComments(events));
-  let listed = $derived([...plays].reverse().slice(0, showAll ? plays.length : 8));
+  let listed = $derived([...plays].reverse().slice(0, showAll ? plays.length : RECENT));
   let xpHint = $derived(
     xpState.active && xpState.expectedUnit
       ? xpState.expectedUnit === 'offense'
-        ? 'Unser Team hat gepunktet: Extrapunkt in der Offense erfassen.'
-        : 'Der Gegner hat gepunktet: Extrapunkt in der Defense erfassen.'
+        ? 'Our team scored: record the extra point on offense.'
+        : 'The opponent scored: record the extra point on defense.'
       : null
   );
   let ended = $derived(clock.ended);
@@ -64,7 +66,7 @@
     const last = [...plays].reverse().find((p) => p.data.unit === u);
     if (!last) return null;
     const { lineup, removed } = pruneLineup(last.data.lineup, rosterIds);
-    if (removed.length) toast = 'Einige Spieler sind nicht mehr im Spieltagskader und wurden aus der Aufstellung entfernt.';
+    if (removed.length) toast = 'Some players are no longer on the game day roster and were removed from the lineup.';
     return { lineup, qb_id: last.data.qb_id, blitzer_ids: last.data.blitzer_ids };
   }
 
@@ -116,9 +118,10 @@
     };
   });
 
-  function showToast(msg: string) {
+  function showToast(msg: string, top = false) {
     toast = msg;
-    setTimeout(() => { if (toast === msg) toast = ''; }, 3500);
+    toastTop = top;
+    setTimeout(() => { if (toast === msg) toast = ''; }, top ? 4500 : 3500);
   }
 
   function change(c: Partial<Draft>) {
@@ -142,16 +145,22 @@
   }
 
   async function save(confirmed = false) {
-    if (!permission.ok) return showToast(permission.reason ?? 'Keine Berechtigung');
+    if (!permission.ok) return showToast(permission.reason ?? 'No permission');
     showErrors = true;
     const ev = evaluateDraft($state.snapshot(draft) as Draft, ctx);
     if (!ev.valid) {
-      await Promise.resolve();
-      document.querySelector('.err')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const missing = [
+        ...(ev.errors.lineup ? ['Players on field'] : []),
+        ...(ev.errors.qb_id ? ['Quarterback'] : []),
+        ...ev.fields.filter((f) => f.error).map((f) => playFieldLabel(f.field))
+      ];
+      showToast(`Please fill in: ${missing.join(', ')}`, true);
       return;
     }
-    if (ev.warnings.length && !confirmed) {
-      warnings = ev.warnings;
+    // A missing result is allowed for now; a play evaluation will decide later when one is required.
+    const confirmable = ev.warnings.filter((w) => w.code !== 'no_result');
+    if (confirmable.length && !confirmed) {
+      warnings = confirmable;
       return;
     }
     warnings = [];
@@ -161,7 +170,7 @@
     editing = null;
     showErrors = false;
     drafts[unit] = clearedDraft($state.snapshot(drafts[unit]) as Draft, ctx);
-    showToast('Gespeichert');
+    showToast('Saved');
   }
 
   function clearEvent() {
@@ -171,16 +180,16 @@
   }
 
   async function undo() {
-    if (!permission.ok) return showToast(permission.reason ?? 'Keine Berechtigung');
+    if (!permission.ok) return showToast(permission.reason ?? 'No permission');
     const t = undoTarget(events);
-    if (!t) return showToast('Nichts zum Rückgängigmachen');
+    if (!t) return showToast('Nothing to undo');
     await record({ kind: 'void', voids_id: t.id });
-    showToast(`Rückgängig: ${playSummary(t.data, lookupPlayer)}`);
+    showToast(`Undone: ${playSummary(t.data, lookupPlayer)}`);
   }
 
   async function voidPlay(id: string) {
-    if (!permission.ok) return showToast(permission.reason ?? 'Keine Berechtigung');
-    if (!confirm('Diesen Spielzug stornieren?')) return;
+    if (!permission.ok) return showToast(permission.reason ?? 'No permission');
+    if (!confirm('Void this play?')) return;
     await record({ kind: 'void', voids_id: id });
     if (editing?.id === id) clearEvent();
   }
@@ -197,26 +206,15 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function marker(m: MarkerType) {
-    if (!permission.ok) return showToast(permission.reason ?? 'Keine Berechtigung');
-    await record({ kind: 'marker', marker: m });
-    showToast(MARKER_LABEL[m]);
-  }
-
   async function addComment() {
     const text = commentText.trim();
-    if (!text) return showToast('Kommentar ist leer');
-    if (!permission.ok) return showToast(permission.reason ?? 'Keine Berechtigung');
+    if (!text) return showToast('Comment is empty');
+    if (!permission.ok) return showToast(permission.reason ?? 'No permission');
     await record({ kind: 'comment', text, ...(commentFor ? { play_id: commentFor } : {}) });
     commentText = '';
     commentFor = null;
-    showToast('Kommentar gespeichert');
+    showToast('Comment saved');
   }
-
-  const MARKER_LABEL: Record<MarkerType, string> = {
-    quarter_start: 'Viertel-Beginn', quarter_end: 'Viertel-Ende', halftime: 'Halbzeit', drive_end: 'Drive-Ende', timeout: 'Timeout', game_end: 'Spielende'
-  };
-  const MARKERS: MarkerType[] = ['drive_end', 'timeout', 'quarter_end', 'halftime', 'quarter_start', 'game_end'];
 
   // lineup dialog
   let lineupDraft = $state<string[]>([]);
@@ -237,37 +235,18 @@
   let blitzers = $derived(evaluation.draft.blitzer_ids ?? []);
 
   const time = (ts: number) => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  const names = $derived({ own: ownTeam()?.name ?? 'Emperors', opp: game ? teamName(game.opponent_team_id) : 'Gegner' });
+  const names = $derived({ own: ownTeam()?.name ?? 'Emperors',   opp: game ? teamName(game.opponent_team_id) : 'Opponent' });
 </script>
 
 {#if !game}
-  <div class="banner error">Spiel nicht gefunden. <a href={href('')}>Zur Übersicht</a></div>
+    <div class="banner error">Game not found. <a href={href('')}>Back to overview</a></div>
 {:else}
   <div class="stack">
-    <div class="card">
-      <div class="row between">
-        <div class="small muted">{occasionLabel(game.occasion)} · {names.opp}</div>
-        <SyncBadge />
-      </div>
-      <div class="row between" style="align-items:flex-end">
-        <div>
-          <div class="score" data-testid="score">{names.own.split(' ').at(-1)} {score.own} : {score.opp} {names.opp.split(' ').at(-1)}</div>
-          <div class="small muted" data-testid="clock">
-            {clock.halftime && clock.atBreak ? 'Halbzeit' : clock.ended ? 'Spielende' : periodLabel(clock.period)} · Drive {clock.drive}
-          </div>
-        </div>
-        <div class="row">
-          <a class="btn" href={href(`preview/${gameId}`)}>Ticker-Vorschau</a>
-        </div>
-      </div>
-      <div class="small" style="margin-top:.4rem" data-testid="sync-message">{app.sync.message}</div>
-    </div>
-
     {#if ended}
       <div class="banner {app.sync.pending === 0 ? 'ok' : 'warn'}" data-testid="end-banner">
-        {#if app.sync.pending === 0 && app.backendConfigured}Alles gesichert.
-        {:else if app.backendConfigured}Noch {app.sync.pending} Ereignisse offen – bitte online bleiben.
-        {:else}Spielende erfasst. Daten liegen nur auf diesem Gerät – bitte exportieren.{/if}
+          {#if app.sync.pending === 0 && app.backendConfigured}Everything is saved.
+          {:else if app.backendConfigured}{app.sync.pending} events still pending – please stay online.
+          {:else}Game end recorded. Data only lives on this device – please export.{/if}
       </div>
     {/if}
 
@@ -275,80 +254,74 @@
       <div class="banner warn">{permission.reason}</div>
     {/if}
     {#if rosterIds.length === 0}
-      <div class="banner warn">Für dieses Spiel ist noch kein Spieltagskader festgelegt. <a href={href(`game/${gameId}`)}>Kader festlegen</a></div>
+        <div class="banner warn">No game day roster set for this game yet. <a href={href(`game/${gameId}`)}>Set roster</a></div>
     {/if}
 
-    <div class="card">
-      <div class="row between">
-        <div class="seg {unit}" role="group" aria-label="Einheit">
+    <div class="card capture-form">
+      <div class="cap-head">
+        <div class="score" data-testid="score">{names.own.split(' ').at(-1)} {score.own} : {score.opp} {names.opp.split(' ').at(-1)}</div>
+      </div>
+      {#if app.sync.state === 'error'}<div class="small err" data-testid="sync-message">{app.sync.message}</div>{/if}
+
+      <div class="row between nowrap">
+        <div class="seg {unit}" role="group" aria-label="Unit">
           <button type="button" aria-pressed={unit === 'offense'} data-testid="unit-offense" onclick={() => (unit = 'offense')}>Offense</button>
           <button type="button" aria-pressed={unit === 'defense'} data-testid="unit-defense" onclick={() => (unit = 'defense')}>Defense</button>
         </div>
-        <button type="button" onclick={undo} data-testid="undo">↶ Rückgängig</button>
+        <button type="button" onclick={undo} data-testid="undo">↶ Undo</button>
       </div>
 
       {#if editing}
-        <div class="banner warn" style="margin-top:.6rem">
-          Du bearbeitest einen früheren Spielzug.
-          <button type="button" class="small" onclick={clearEvent}>Abbrechen</button>
+        <div class="banner warn edit-banner">
+          Editing an earlier play.
+          <button type="button" class="small" onclick={clearEvent}>Cancel</button>
         </div>
       {/if}
 
-      <div class="field-title">Spieler auf dem Feld {evaluation.draft.lineup.length ? `(${evaluation.draft.lineup.length})` : ''}</div>
-      <div class="chips" data-testid="lineup">
-        {#each lineupPlayers as p (p.id)}<span class="chip on">#{p.number} {p.name}</span>{/each}
-        <button type="button" class="chip" onclick={openLineup} data-testid="lineup-edit">{lineupPlayers.length ? 'Wechsel' : 'Aufstellung wählen'}</button>
+      <div class="field-row" class:invalid={showErrors && evaluation.errors.lineup} data-testid="lineup">
+        <div class="flabel">Players {evaluation.draft.lineup.length ? `(${evaluation.draft.lineup.length})` : ''}</div>
+        <div class="fctl">
+          <button type="button" class="ctl ctl-btn" onclick={openLineup} data-testid="lineup-edit" aria-label="Select players on field">
+            <span class="ellipsis">{lineupPlayers.length ? lineupPlayers.map((p) => `#${p.number}`).join(' ') : showErrors && evaluation.errors.lineup ? 'Please select' : 'Select lineup'}</span>
+            <span aria-hidden="true">✎</span>
+          </button>
+        </div>
+        {#if showErrors && evaluation.errors.lineup}<div class="err sr-only" role="alert">{evaluation.errors.lineup}</div>{/if}
       </div>
-      {#if showErrors && evaluation.errors.lineup}<div class="err" role="alert">{evaluation.errors.lineup}</div>{/if}
 
       {#if unit === 'offense'}
-        <div class="field-title"><span>Quarterback</span><span class="req">*</span></div>
-        <div class="chips">
-          {#each qbOptions as p (p.id)}
-            <button type="button" class="chip" aria-pressed={evaluation.draft.qb_id === p.id} data-testid="qb-{p.number}" onclick={() => change({ qb_id: p.id })}>#{p.number} {p.name}</button>
-          {/each}
+        <div class="field-row" class:invalid={showErrors && evaluation.errors.qb_id} data-field="qb_id">
+          <div class="flabel"><span>Quarterback</span><span class="req">*</span></div>
+          <div class="fctl">
+            <PlayerSelect players={qbOptions} value={evaluation.draft.qb_id} required invalid={showErrors && !!evaluation.errors.qb_id} label="Quarterback" testid="qb" onchange={(id) => change({ qb_id: id })} />
+          </div>
+          {#if showErrors && evaluation.errors.qb_id}<div class="err sr-only" role="alert">{evaluation.errors.qb_id}</div>{/if}
         </div>
-        {#if showErrors && evaluation.errors.qb_id}<div class="err" role="alert">{evaluation.errors.qb_id}</div>{/if}
       {:else}
-        <div class="field-title">Blitzer (optional)</div>
-        <div class="chips">
-          {#each blitzOptions as p (p.id)}
-            <button type="button" class="chip" aria-pressed={blitzers.includes(p.id)} data-testid="blitz-{p.number}"
-              onclick={() => change({ blitzer_ids: blitzers.includes(p.id) ? blitzers.filter((x) => x !== p.id) : [...blitzers, p.id] })}>#{p.number} {p.name}</button>
-          {/each}
+        <div class="field-row" data-field="blitzer_ids">
+          <div class="flabel">Blitzers</div>
+          <div class="fctl">
+            <PlayerMulti players={blitzOptions} values={blitzers} label="Blitzers" testid="blitz" onchange={(ids) => change({ blitzer_ids: ids })} />
+          </div>
         </div>
       {/if}
-
-      <hr style="border:0;border-top:1px solid var(--line);margin:1rem 0" />
 
       <PlayForm {unit} {evaluation} {lineupPlayers} xp={ctx.xp} {xpHint} {showErrors} onchange={change} />
 
-      <div class="row" style="margin-top:1.25rem">
-        <button type="button" class="primary" style="min-width:9rem" onclick={() => save()} data-testid="save">{editing ? 'Änderung speichern' : 'Save Event'}</button>
+      <div class="action-bar">
+        <button type="button" class="primary" onclick={() => save()} data-testid="save">{editing ? 'Save changes' : 'Save Event'}</button>
         <button type="button" class="danger" onclick={clearEvent} data-testid="clear">Clear Event</button>
       </div>
     </div>
 
     <div class="card">
-      <div class="small muted">Zuletzt gespeichert</div>
-      <div data-testid="last-event">{lastPlay ? playSummary(lastPlay.data, lookupPlayer) : '–'}</div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">Spielstand-Marker</h3>
-      <div class="chips">
-        {#each MARKERS as m (m)}<button type="button" class="chip" data-testid="marker-{m}" onclick={() => marker(m)}>{MARKER_LABEL[m]}</button>{/each}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">Kommentar</h3>
+      <h3 style="margin-top:0">Comment</h3>
       {#if commentFor}
         {@const target = plays.find((p) => p.id === commentFor)}
-        <div class="small muted">Zu: {target ? playSummary(target.data, lookupPlayer) : 'Spielzug'} <button type="button" class="small" onclick={() => (commentFor = null)}>×</button></div>
+        <div class="small muted">On: {target ? playSummary(target.data, lookupPlayer) : 'play'} <button type="button" class="small" onclick={() => (commentFor = null)}>×</button></div>
       {/if}
       <div class="row">
-        <input class="grow" placeholder="z. B. ToD vergessen" bind:value={commentText} data-testid="comment-input" />
+        <input class="grow" placeholder="e.g. forgot ToD" bind:value={commentText} data-testid="comment-input" />
         <button type="button" onclick={addComment} data-testid="comment-save">Save comment</button>
       </div>
       {#each comments.slice(-3).reverse() as c (c.id)}
@@ -357,51 +330,51 @@
     </div>
 
     <div class="card">
-      <h3 style="margin-top:0">Spielzüge</h3>
+      <h3 style="margin-top:0">Plays</h3>
       {#each listed as p (p.id)}
         <div class="event-row" data-testid="play-row">
           <div class="row between">
-            <span class="small muted">{time(p.client_ts)} · {periodLabel(p.period)} · <span class="tag {p.data.unit}">{p.data.unit === 'offense' ? 'O' : 'D'}</span>{#if p.corrected} · korrigiert{/if}</span>
+            <span class="small muted">{time(p.client_ts)} · <span class="tag {p.data.unit}">{p.data.unit === 'offense' ? 'O' : 'D'}</span>{#if p.corrected} · corrected{/if}</span>
             <span class="row">
-              <button type="button" class="small" onclick={() => editPlay(p.id)}>Bearbeiten</button>
-              <button type="button" class="small" onclick={() => { commentFor = p.id; }}>Kommentar</button>
-              <button type="button" class="small danger" onclick={() => voidPlay(p.id)}>Stornieren</button>
+              <button type="button" class="small" onclick={() => editPlay(p.id)}>Edit</button>
+              <button type="button" class="small" onclick={() => { commentFor = p.id; }}>Comment</button>
+              <button type="button" class="small danger" onclick={() => voidPlay(p.id)}>Void</button>
             </span>
           </div>
           <div>{playSentence(p.data, lookupPlayer, names)}</div>
         </div>
       {:else}
-        <p class="muted">Noch keine Spielzüge.</p>
+        <p class="muted">No plays yet.</p>
       {/each}
-      {#if plays.length > 8 && !showAll}<button type="button" class="small" onclick={() => (showAll = true)}>Alle {plays.length} anzeigen</button>{/if}
+      {#if plays.length > RECENT && !showAll}<button type="button" class="small" onclick={() => (showAll = true)}>Show all {plays.length}</button>{/if}
     </div>
   </div>
 
   {#if lineupOpen}
-    <Dialog title="Spieler auf dem Feld" onclose={() => (lineupOpen = false)}>
-      <p class="small muted">Meist 5 Spieler. Sortierung nach Priorität ({unit === 'offense' ? 'Offense' : 'Defense'}).</p>
+    <Dialog title="Players on field" onclose={() => (lineupOpen = false)}>
+      <p class="small muted">Usually 5 players. Sorted by priority ({unit === 'offense' ? 'Offense' : 'Defense'}).</p>
       <div class="chips">
         {#each sortPlayers(rosterPlayers, sortKey) as p (p.id)}
           <button type="button" class="chip" aria-pressed={lineupDraft.includes(p.id)} data-testid="lineup-{p.number}" onclick={() => toggleLineup(p.id)}>#{p.number} {p.name}</button>
         {/each}
       </div>
-      <p class:err={lineupDraft.length !== 5}>{lineupDraft.length} ausgewählt{lineupDraft.length !== 5 ? ' (üblich: 5)' : ''}</p>
-      <div class="row">
-        <button type="button" class="primary" onclick={applyLineup} data-testid="lineup-ok">Übernehmen</button>
-        <button type="button" onclick={() => (lineupOpen = false)}>Abbrechen</button>
+      <p class:err={lineupDraft.length !== 5}>{lineupDraft.length} selected{lineupDraft.length !== 5 ? ' (usually 5)' : ''}</p>
+      <div class="row dialog-actions">
+        <button type="button" class="primary" onclick={applyLineup} data-testid="lineup-ok">Apply</button>
+        <button type="button" onclick={() => (lineupOpen = false)}>Cancel</button>
       </div>
     </Dialog>
   {/if}
 
   {#if warnings.length}
-    <Dialog title="Bitte bestätigen" onclose={() => (warnings = [])}>
+    <Dialog title="Please confirm" onclose={() => (warnings = [])}>
       <ul data-testid="warnings">{#each warnings as w (w.code)}<li>{w.message}</li>{/each}</ul>
-      <div class="row">
-        <button type="button" class="primary" onclick={() => save(true)} data-testid="confirm-save">Trotzdem speichern</button>
-        <button type="button" onclick={() => (warnings = [])}>Zurück</button>
+      <div class="row dialog-actions">
+        <button type="button" class="primary" onclick={() => save(true)} data-testid="confirm-save">Save anyway</button>
+        <button type="button" onclick={() => (warnings = [])}>Back</button>
       </div>
     </Dialog>
   {/if}
 
-  {#if toast}<div class="toast" role="status">{toast}</div>{/if}
+  {#if toast}<div class="toast" class:top={toastTop} role="status">{toast}</div>{/if}
 {/if}

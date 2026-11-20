@@ -62,7 +62,7 @@ describe('game rules', () => {
     const a = [asg('u1')];
     expect(canRecord({ game, userId: 'u1', role: 'typist', assignments: a }).ok).toBe(true);
     expect(canRecord({ game, userId: 'u2', role: 'typist', assignments: a }).ok).toBe(false);
-    expect(canRecord({ game: { ...game, status: 'finished' }, userId: 'u1', role: 'typist', assignments: a }).reason).toContain('beendet');
+    expect(canRecord({ game: { ...game, status: 'finished' }, userId: 'u1', role: 'typist', assignments: a }).reason).toContain('finished');
     expect(canRecord({ game: { ...game, status: 'planned' }, userId: 'u1', role: 'typist', assignments: a }).ok).toBe(false);
     expect(canRecord({ game: { ...game, status: 'finished' }, userId: 'adm', role: 'admin', assignments: [] }).ok).toBe(true);
     expect(canRecord({ game, userId: 'v', role: 'viewer', assignments: a }).ok).toBe(false);

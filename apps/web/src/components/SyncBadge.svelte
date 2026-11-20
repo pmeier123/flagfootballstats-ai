@@ -2,12 +2,12 @@
   import { app } from '../lib/app.svelte';
 
   const labels: Record<string, string> = {
-    synced: 'Gesichert',
-    sending: 'Wird gesendet',
+    synced: 'Saved',
+    sending: 'Sending',
     offline: 'Offline',
-    error: 'Fehler',
-    sheets_pending: 'Gesichert, Sheets folgt',
-    local_only: 'Nur lokal'
+    error: 'Error',
+    sheets_pending: 'Saved, sheets pending',
+    local_only: 'Local only'
   };
   let s = $derived(app.sync);
 </script>

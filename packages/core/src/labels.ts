@@ -1,35 +1,35 @@
 import type { Unit } from './types.js';
 
 export const FIELD_LABELS: Record<string, string> = {
-  lineup: 'Spieler auf dem Feld',
+  lineup: 'Players on field',
   qb_id: 'Quarterback',
-  blitzer_ids: 'Blitzer',
-  type: 'Spielzugtyp',
-  player_id: 'Spieler',
-  pass_result: 'Passergebnis',
-  target_result: 'Target-Ergebnis',
-  incomplete_reason: 'Grund Incomplete',
-  air_yards: 'Air Yards',
-  yards_after_catch: 'Yards after Catch',
-  yards_run: 'Gelaufene Yards',
-  flag_pulls_missed: 'Verpasste Flag Pulls',
-  yards_lost: 'Verlorene Yards',
-  flag_puller_id: 'Flag Puller',
-  failed_puller_ids: 'Fehlgeschlagene Flag-Pull-Versuche',
+  blitzer_ids: 'Blitzers',
+  type: 'Play type',
+  player_id: 'Player',
+  pass_result: 'Pass result',
+  target_result: 'Target result',
+  incomplete_reason: 'Incomplete reason',
+  air_yards: 'Air yards',
+  yards_after_catch: 'Yards after catch',
+  yards_run: 'Run yards',
+  flag_pulls_missed: 'Missed flag pulls',
+  yards_lost: 'Yards lost',
+  flag_puller_id: 'Flag puller',
+  failed_puller_ids: 'Missed pullers',
   foul: 'Foul',
-  foul_yards: 'Foul Yards',
-  result: 'Ergebnis',
-  xp_result: 'Extrapunkt-Ergebnis'
+  foul_yards: 'Foul yards',
+  result: 'Result',
+  xp_result: 'Extra point result'
 };
 
 export const TYPE_LABELS: Record<Unit, Record<string, string>> = {
   offense: {
     pass: 'Pass', run: 'Run', sack: 'Sack', throwaway: 'Throwaway', dead_snap: 'Dead Snap',
-    foul_committed: 'Foul begangen', foul_drawn: 'Foul gezogen'
+    foul_committed: 'Foul committed', foul_drawn: 'Foul drawn'
   },
   defense: {
     target: 'Target', run: 'Run', sack: 'Sack', throwaway: 'Throwaway', dead_snap: 'Dead Snap',
-    foul_committed: 'Foul begangen', foul_drawn: 'Foul gezogen'
+    foul_committed: 'Foul committed', foul_drawn: 'Foul drawn'
   }
 };
 
@@ -37,33 +37,33 @@ export const OPTION_LABELS: Record<string, string> = {
   catch: 'Catch',
   incomplete: 'Incomplete',
   interception: 'Interception',
-  catch_allowed: 'Catch zugelassen',
-  fifty_fifty: '50/50-Ball',
+  catch_allowed: 'Catch allowed',
+  fifty_fifty: '50/50 ball',
   drop: 'Drop',
-  uncatchable: 'Nicht fangbar',
-  batted: 'Abgefälscht',
+  uncatchable: 'Uncatchable',
+  batted: 'Batted',
   td: 'Touchdown',
-  first_down: 'First Down',
-  tod: 'Turnover on Downs',
+  first_down: 'First down',
+  tod: 'Turnover on downs',
   pick_6: 'Pick 6',
   safety: 'Safety',
-  '1xp_made': '1 XP gemacht',
-  '1xp_missed': '1 XP verfehlt',
-  '2xp_made': '2 XP gemacht',
-  '2xp_missed': '2 XP verfehlt',
-  '1xp_allowed': '1 XP zugelassen',
-  '1xp_prevented': '1 XP verhindert',
-  '2xp_allowed': '2 XP zugelassen',
-  '2xp_prevented': '2 XP verhindert',
-  xp_retry: 'XP Retry',
-  illegal_contact: 'Illegaler Kontakt',
-  screening_bb: 'Abschirmen / BB',
-  false_start: 'False Start',
-  flag_guarding_jumping: 'Flag Guarding / Jumping',
-  unsporting: 'Unsportliches Verhalten',
-  illegal_blitz: 'Illegaler Blitz',
-  flag_guarding: 'Flag Guarding',
-  other: 'Sonstiges'
+  '1xp_made': '1 XP made',
+  '1xp_missed': '1 XP missed',
+  '2xp_made': '2 XP made',
+  '2xp_missed': '2 XP missed',
+  '1xp_allowed': '1 XP allowed',
+  '1xp_prevented': '1 XP prevented',
+  '2xp_allowed': '2 XP allowed',
+  '2xp_prevented': '2 XP prevented',
+  xp_retry: 'XP retry',
+  illegal_contact: 'Illegal contact',
+  screening_bb: 'Screening / BB',
+  false_start: 'False start',
+  flag_guarding_jumping: 'Flag guarding / jumping',
+  unsporting: 'Unsportsmanlike conduct',
+  illegal_blitz: 'Illegal blitz',
+  flag_guarding: 'Flag guarding',
+  other: 'Other'
 };
 
 export function optionLabel(value: string | number): string {

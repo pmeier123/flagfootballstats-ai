@@ -31,7 +31,7 @@ export interface Evaluation {
   valid: boolean;
 }
 
-const REQUIRED_MSG = 'Pflichtfeld';
+const REQUIRED_MSG = 'Required';
 
 function valuesOf(draft: Draft, ctx: RuleContext): Record<string, unknown> {
   return { ...draft, xp: ctx.xp };
@@ -112,14 +112,14 @@ export function evaluateDraft(input: Draft, ctx: RuleContext): Evaluation {
   const fields: FieldState[] = [];
 
   const lineup = draft.lineup;
-  if (lineup.length === 0) errors.lineup = 'Mindestens ein Spieler muss auf dem Feld stehen';
-  else if (lineup.length > 9) errors.lineup = 'Zu viele Spieler auf dem Feld (maximal 9)';
-  else if (ctx.roster && lineup.some((id) => !ctx.roster!.includes(id))) errors.lineup = 'Spieler ist nicht im Spieltagskader';
-  else if (lineup.length !== 5) warnings.push({ code: 'lineup_size', message: `Nur ${lineup.length} Spieler auf dem Feld? Üblich sind 5.` });
+  if (lineup.length === 0) errors.lineup = 'At least one player must be on the field';
+  else if (lineup.length > 9) errors.lineup = 'Too many players on the field (max 9)';
+  else if (ctx.roster && lineup.some((id) => !ctx.roster!.includes(id))) errors.lineup = 'Player is not on the game day roster';
+  else if (lineup.length !== 5) warnings.push({ code: 'lineup_size', message: `Only ${lineup.length} players on the field? Usually 5.` });
 
   if (draft.unit === 'offense') {
     if (!draft.qb_id) errors.qb_id = REQUIRED_MSG;
-    else if (!lineup.includes(draft.qb_id)) errors.qb_id = 'Quarterback steht nicht auf dem Feld';
+    else if (!lineup.includes(draft.qb_id)) errors.qb_id = 'Quarterback is not on the field';
   }
 
   for (const rule of rules) {
@@ -137,14 +137,14 @@ export function evaluateDraft(input: Draft, ctx: RuleContext): Evaluation {
   if (!ctx.xp) {
     const resultRule = rules.find((r) => r.field === 'result');
     if (resultRule && draft.result === undefined) {
-      warnings.push({ code: 'no_result', message: 'Kein Ergebnis gewählt. Der Spielzug wird ohne besonderes Ergebnis gespeichert.' });
+      warnings.push({ code: 'no_result', message: 'No result selected. The play is saved without a special result.' });
     }
   } else if (ctx.xpExpectedUnit && ctx.xpExpectedUnit !== draft.unit) {
     warnings.push({
       code: 'xp_unit_mismatch',
       message: ctx.xpExpectedUnit === 'defense'
-        ? 'Der Gegner hat gepunktet: Der Extrapunkt wird normalerweise in der Defense erfasst.'
-        : 'Unser Team hat gepunktet: Der Extrapunkt wird normalerweise in der Offense erfasst.'
+        ? 'The opponent scored: the extra point is usually recorded on defense.'
+        : 'Our team scored: the extra point is usually recorded on offense.'
     });
   }
 

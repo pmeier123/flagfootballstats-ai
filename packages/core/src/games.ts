@@ -25,11 +25,11 @@ export interface WriteCheck { ok: boolean; reason?: string }
 export function canRecord(opts: { game: Game; userId: string | null; role: Role; assignments: readonly TypistAssignment[] }): WriteCheck {
   const { game, userId, role, assignments } = opts;
   if (role === 'admin') return { ok: true };
-  if (role !== 'typist' || !userId) return { ok: false, reason: 'Keine Berechtigung zum Erfassen' };
-  if (game.status === 'finished') return { ok: false, reason: 'Das Spiel ist beendet' };
-  if (game.status !== 'live') return { ok: false, reason: 'Das Spiel läuft noch nicht' };
+  if (role !== 'typist' || !userId) return { ok: false, reason: 'No permission to record' };
+  if (game.status === 'finished') return { ok: false, reason: 'The game has finished' };
+  if (game.status !== 'live') return { ok: false, reason: 'The game has not started yet' };
   const active = activeTypist(assignments, game.id);
-  if (!active || active.user_id !== userId) return { ok: false, reason: 'Du bist nicht der aktive Typist dieses Spiels' };
+  if (!active || active.user_id !== userId) return { ok: false, reason: 'You are not the active typist of this game' };
   return { ok: true };
 }
 

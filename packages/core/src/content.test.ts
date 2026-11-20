@@ -25,29 +25,29 @@ describe('ticker sentences', () => {
     const t = playSentence({ ...base, player_id: 'pb', pass_result: 'catch', air_yards: 15, yards_after_catch: 15, flag_pulls_missed: 1, result: 'first_down' } as PlayData, lookup);
     expect(t).toContain('#96 Daniel Binder');
     expect(t).toContain('QB #54 Oskar Küsgen');
-    expect(t).toContain('15 Air Yards');
-    expect(t).toContain('15 Yards nach dem Catch');
-    expect(t).toContain('1 verpasster Flag Pull');
-    expect(t).toContain('First Down');
+    expect(t).toContain('15 air yards');
+    expect(t).toContain('15 yards after the catch');
+    expect(t).toContain('1 missed flag pull');
+    expect(t).toContain('First down');
   });
 
   it('covers every field kind', () => {
     const s = (d: Partial<PlayData>) => playSentence({ ...base, ...d } as PlayData, lookup, { own: 'Emperors', opp: 'Knights' });
     expect(s({ pass_result: 'incomplete', player_id: 'pb', incomplete_reason: 'drop' })).toContain('Drop');
-    expect(s({ pass_result: 'interception', player_id: 'pb', result: 'pick_6' })).toContain('Pick 6 für Knights');
-    expect(s({ type: 'run', player_id: 'pb', yards_run: 10, flag_pulls_missed: 2, result: 'td' })).toMatch(/10 Yards.*2 verpasste Flag Pulls.*Touchdown Emperors/);
-    expect(s({ type: 'sack', yards_lost: -5, result: 'safety' })).toMatch(/-5 Yards.*Safety für Knights/);
-    expect(s({ type: 'foul_committed', foul: 'other', foul_yards: -5, player_id: 'pb' })).toContain('Sonstiges (-5 Yards)');
-    expect(s({ type: 'throwaway', result: 'tod' })).toContain('Turnover on Downs');
-    expect(s({ xp_result: '2xp_made', player_id: 'pb', pass_result: 'catch', air_yards: 5 })).toContain('2 XP gemacht');
+    expect(s({ pass_result: 'interception', player_id: 'pb', result: 'pick_6' })).toContain('Pick 6 for Knights');
+    expect(s({ type: 'run', player_id: 'pb', yards_run: 10, flag_pulls_missed: 2, result: 'td' })).toMatch(/10 yards.*2 missed flag pulls.*Touchdown Emperors/);
+    expect(s({ type: 'sack', yards_lost: -5, result: 'safety' })).toMatch(/-5 yards.*Safety for Knights/);
+    expect(s({ type: 'foul_committed', foul: 'other', foul_yards: -5, player_id: 'pb' })).toContain('Other (-5 yards)');
+    expect(s({ type: 'throwaway', result: 'tod' })).toContain('Turnover on downs');
+    expect(s({ xp_result: '2xp_made', player_id: 'pb', pass_result: 'catch', air_yards: 5 })).toContain('2 XP made');
   });
 
   it('defense sentences include pullers and perspective of touchdowns', () => {
     const d: PlayData = { unit: 'defense', type: 'target', lineup: L5, player_id: 'pl', target_result: 'catch_allowed', flag_puller_id: 'pp', failed_puller_ids: ['pm', 'pl'], result: 'td' };
     const t = playSentence(d, lookup, { own: 'Emperors', opp: 'Knights' });
     expect(t).toContain('#23 Thorsten Lenz');
-    expect(t).toContain('Flag Pull durch #95 Lorenz Hornung');
-    expect(t).toContain('verpasst von #91 Max, #23 Thorsten Lenz');
+    expect(t).toContain('Flag pull by #95 Lorenz Hornung');
+    expect(t).toContain('missed by #91 Max, #23 Thorsten Lenz');
     expect(t).toContain('Touchdown Knights');
   });
 
@@ -62,7 +62,7 @@ describe('ticker sentences', () => {
     expect(entries.map((e) => e.highlight)).toEqual(['touchdown', 'xp', 'sack']);
     expect(entries[2]!.corrected).toBe(true);
     expect(entries[0]!.scoring?.points).toBe(6);
-    expect(entries[0]!.details[0]).toContain('Auf dem Feld');
+    expect(entries[0]!.details[0]).toContain('On field');
     expect(filterTickerEntries(entries, { scoringOnly: true }).map((e) => e.id)).toEqual(['a', 'b']);
     expect(filterTickerEntries(entries, { playerId: 'pq' }).map((e) => e.id)).toEqual(['a', 'b', 'c']);
     expect(filterTickerEntries(entries, { playerId: 'pw' }).map((e) => e.id)).toEqual(['b']);

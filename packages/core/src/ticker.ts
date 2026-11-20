@@ -25,15 +25,15 @@ export interface TickerEntry {
   playerIds: string[];
 }
 
-const DEFAULT_NAMES: TickerNames = { own: 'Emperors', opp: 'Gegner' };
+const DEFAULT_NAMES: TickerNames = { own: 'Emperors', opp: 'Opponent' };
 
 export function playerText(lookup: PlayerLookup, id: string | undefined | null): string {
   const p: PlayerRef | undefined = lookup(id);
-  return p ? `#${p.number} ${p.name}` : 'unbekannter Spieler';
+  return p ? `#${p.number} ${p.name}` : 'unknown player';
 }
 
 function yards(n: number): string {
-  return `${n === 30 ? '30+' : n} Yards`;
+  return `${n === 30 ? '30+' : n} yards`;
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -47,45 +47,45 @@ function list(lookup: PlayerLookup, ids: readonly string[] | undefined): string 
 function resultText(d: PlayData, names: TickerNames): string {
   switch (d.result) {
     case 'td': return sideOfTouchdown(d.unit, 'td') === 'own' ? `Touchdown ${names.own}!` : `Touchdown ${names.opp}!`;
-    case 'pick_6': return sideOfTouchdown(d.unit, 'pick_6') === 'own' ? `Pick 6 für ${names.own}!` : `Pick 6 für ${names.opp}!`;
-    case 'safety': return d.unit === 'offense' ? `Safety für ${names.opp}!` : `Safety für ${names.own}!`;
-    case 'first_down': return 'First Down.';
-    case 'tod': return 'Turnover on Downs.';
+    case 'pick_6': return sideOfTouchdown(d.unit, 'pick_6') === 'own' ? `Pick 6 for ${names.own}!` : `Pick 6 for ${names.opp}!`;
+    case 'safety': return d.unit === 'offense' ? `Safety for ${names.opp}!` : `Safety for ${names.own}!`;
+    case 'first_down': return 'First down.';
+    case 'tod': return 'Turnover on downs.';
     default: return '';
   }
 }
 
 function foulText(d: PlayData): string {
-  const base = d.foul ? optionLabel(d.foul) : 'unbekannt';
+  const base = d.foul ? optionLabel(d.foul) : 'unknown';
   return d.foul_yards !== undefined && d.foul === 'other' ? `${base} (${yards(d.foul_yards)})` : base;
 }
 
 function offenseSentence(d: PlayData, lk: PlayerLookup): string {
   const p = d.player_id ? playerText(lk, d.player_id) : undefined;
-  const qb = d.qb_id ? `QB ${playerText(lk, d.qb_id)}` : 'QB unbekannt';
-  const flags = d.flag_pulls_missed ? `, ${plural(d.flag_pulls_missed, 'verpasster Flag Pull', 'verpasste Flag Pulls')}` : '';
+  const qb = d.qb_id ? `QB ${playerText(lk, d.qb_id)}` : 'unknown QB';
+  const flags = d.flag_pulls_missed ? `, ${plural(d.flag_pulls_missed, 'missed flag pull', 'missed flag pulls')}` : '';
   switch (d.type) {
     case 'pass':
       if (d.pass_result === 'catch') {
-        return `Pass von ${qb} auf ${p} gefangen: ${d.air_yards ?? 0} Air Yards + ${d.yards_after_catch ?? 0} Yards nach dem Catch${flags}.`;
+        return `Pass from ${qb} to ${p} caught: ${d.air_yards ?? 0} air yards + ${d.yards_after_catch ?? 0} yards after the catch${flags}.`;
       }
       if (d.pass_result === 'incomplete') {
-        return `Pass von ${qb} auf ${p} unvollständig${d.incomplete_reason ? ` (${optionLabel(d.incomplete_reason)})` : ''}.`;
+        return `Pass from ${qb} to ${p} incomplete${d.incomplete_reason ? ` (${optionLabel(d.incomplete_reason)})` : ''}.`;
       }
-      if (d.pass_result === 'interception') return `Pass von ${qb} auf ${p} abgefangen (Interception).`;
-      return `Pass von ${qb} auf ${p}.`;
+      if (d.pass_result === 'interception') return `Pass from ${qb} to ${p} intercepted.`;
+      return `Pass from ${qb} to ${p}.`;
     case 'run':
-      return `Lauf von ${p}: ${d.yards_run ?? 0} Yards${flags}.`;
+      return `Run by ${p}: ${d.yards_run ?? 0} yards${flags}.`;
     case 'sack':
-      return `Sack gegen ${qb}: ${yards(d.yards_lost ?? 0)}.`;
+      return `Sack against ${qb}: ${yards(d.yards_lost ?? 0)}.`;
     case 'throwaway':
-      return `Throwaway von ${qb}.`;
+      return `Throwaway by ${qb}.`;
     case 'dead_snap':
-      return 'Dead Snap.';
+      return 'Dead snap.';
     case 'foul_committed':
-      return `Foul begangen${p ? ` von ${p}` : ''}: ${foulText(d)}.`;
+      return `Foul committed${p ? ` by ${p}` : ''}: ${foulText(d)}.`;
     case 'foul_drawn':
-      return `Foul gezogen${p ? ` von ${p}` : ''}: ${foulText(d)}.`;
+      return `Foul drawn${p ? ` by ${p}` : ''}: ${foulText(d)}.`;
     default:
       return `${typeLabel('offense', d.type)}.`;
   }
@@ -93,29 +93,29 @@ function offenseSentence(d: PlayData, lk: PlayerLookup): string {
 
 function defenseSentence(d: PlayData, lk: PlayerLookup): string {
   const p = d.player_id ? playerText(lk, d.player_id) : undefined;
-  const puller = d.flag_puller_id ? ` Flag Pull durch ${playerText(lk, d.flag_puller_id)}` : '';
-  const failed = d.failed_puller_ids?.length ? `, verpasst von ${list(lk, d.failed_puller_ids)}` : '';
-  const pulls = puller || failed ? `${puller || ' Flag Pull'}${failed}.` : '';
+  const puller = d.flag_puller_id ? ` Flag pull by ${playerText(lk, d.flag_puller_id)}` : '';
+  const failed = d.failed_puller_ids?.length ? `, missed by ${list(lk, d.failed_puller_ids)}` : '';
+  const pulls = puller || failed ? `${puller || ' Flag pull'}${failed}.` : '';
   switch (d.type) {
     case 'target':
-      if (d.target_result === 'catch_allowed') return `Gegnerischer Pass gegen ${p}: Catch zugelassen.${pulls}`;
+      if (d.target_result === 'catch_allowed') return `Opponent pass against ${p}: catch allowed.${pulls}`;
       if (d.target_result === 'incomplete') {
-        return `Gegnerischer Pass gegen ${p}: unvollständig${d.incomplete_reason ? ` (${optionLabel(d.incomplete_reason)})` : ''}.`;
+        return `Opponent pass against ${p}: incomplete${d.incomplete_reason ? ` (${optionLabel(d.incomplete_reason)})` : ''}.`;
       }
-      if (d.target_result === 'interception') return `Gegnerischer Pass gegen ${p}: Interception!`;
-      return `Gegnerischer Pass gegen ${p}.${pulls}`;
+      if (d.target_result === 'interception') return `Opponent pass against ${p}: interception!`;
+      return `Opponent pass against ${p}.${pulls}`;
     case 'run':
-      return `Gegnerischer Lauf.${pulls}`;
+      return `Opponent run.${pulls}`;
     case 'sack':
-      return `Sack${p ? ` durch ${p}` : ''}.`;
+      return `Sack${p ? ` by ${p}` : ''}.`;
     case 'throwaway':
-      return `Gegnerischer Throwaway${p ? ` (Druck durch ${p})` : ''}.`;
+      return `Opponent throwaway${p ? ` (pressure by ${p})` : ''}.`;
     case 'dead_snap':
-      return 'Gegnerischer Dead Snap.';
+      return 'Opponent dead snap.';
     case 'foul_committed':
-      return `Foul begangen${p ? ` von ${p}` : ''}: ${foulText(d)}.`;
+      return `Foul committed${p ? ` by ${p}` : ''}: ${foulText(d)}.`;
     case 'foul_drawn':
-      return `Foul gezogen${p ? ` von ${p}` : ''}: ${foulText(d)}.`;
+      return `Foul drawn${p ? ` by ${p}` : ''}: ${foulText(d)}.`;
     default:
       return `${typeLabel('defense', d.type)}.`;
   }
@@ -124,7 +124,7 @@ function defenseSentence(d: PlayData, lk: PlayerLookup): string {
 export function playSentence(d: PlayData, lookup: PlayerLookup, names: TickerNames = DEFAULT_NAMES): string {
   const base = d.unit === 'offense' ? offenseSentence(d, lookup) : defenseSentence(d, lookup);
   const result = resultText(d, names);
-  const xp = d.xp_result ? ` Extrapunkt: ${optionLabel(d.xp_result)}.` : '';
+  const xp = d.xp_result ? ` Extra point: ${optionLabel(d.xp_result)}.` : '';
   return [base, result, xp.trim()].filter(Boolean).join(' ');
 }
 
@@ -146,13 +146,13 @@ export function playerIdsOf(d: PlayData): string[] {
 
 function detailLines(p: EffectivePlay, lk: PlayerLookup, author?: (id: string | null) => string | undefined): string[] {
   const d = p.data;
-  const lines = [`Auf dem Feld: ${list(lk, d.lineup)}`];
+  const lines = [`On field: ${list(lk, d.lineup)}`];
   if (d.qb_id) lines.push(`Quarterback: ${playerText(lk, d.qb_id)}`);
   if (d.blitzer_ids?.length) lines.push(`Blitz: ${list(lk, d.blitzer_ids)}`);
-  if (d.flag_puller_id) lines.push(`Flag Puller: ${playerText(lk, d.flag_puller_id)}`);
-  if (d.failed_puller_ids?.length) lines.push(`Fehlversuche: ${list(lk, d.failed_puller_ids)}`);
+  if (d.flag_puller_id) lines.push(`Flag puller: ${playerText(lk, d.flag_puller_id)}`);
+  if (d.failed_puller_ids?.length) lines.push(`Missed attempts: ${list(lk, d.failed_puller_ids)}`);
   const by = author?.(p.author_id) ?? p.author_label;
-  if (by) lines.push(`Erfasst von: ${by}`);
+  if (by) lines.push(`Recorded by: ${by}`);
   return lines;
 }
 

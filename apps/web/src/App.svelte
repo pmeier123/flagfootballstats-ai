@@ -27,22 +27,28 @@
 {:else if !app.ready}
   <div class="shell"><p class="muted" style="margin-top:2rem;text-align:center">Lade …</p></div>
 {:else}
-  <header class="topbar">
+  <header class="topbar" class:compact={route.name === 'capture'}>
     <div class="topbar-inner">
-      <span class="brand">FF Stats</span>
-      {#if app.user}
-        <a class={active('home')} href={href('')}>Spiele</a>
-        {#if isAdmin || !app.backendConfigured}
-          <a class={active('players')} href={href('players')}>Spieler</a>
-          <a class={active('import')} href={href('import')}>Import</a>
+      {#if route.name === 'capture'}
+        <a class="nav" href={href('')} data-testid="back">‹ Games</a>
+        <span class="grow"></span>
+        <SyncBadge />
+      {:else}
+        <span class="brand">FF Stats</span>
+        {#if app.user}
+          <a class={active('home')} href={href('')}>Spiele</a>
+          {#if isAdmin || !app.backendConfigured}
+            <a class={active('players')} href={href('players')}>Spieler</a>
+            <a class={active('import')} href={href('import')}>Import</a>
+          {/if}
         {/if}
+        <a class={active('settings')} href={href('settings')}>Einstellungen</a>
+        <span class="grow"></span>
+        <SyncBadge />
       {/if}
-      <a class={active('settings')} href={href('settings')}>Einstellungen</a>
-      <span class="grow"></span>
-      {#if route.name !== 'capture'}<SyncBadge />{/if}
     </div>
   </header>
-  <main class="shell" style="padding-top:1rem">
+  <main class="shell" class:cap={route.name === 'capture'} style:padding-top={route.name === 'capture' ? undefined : '1rem'}>
     {#if app.backendConfigured && !app.user && route.name !== 'settings'}
       <div class="card">
         <h1>Anmelden</h1>

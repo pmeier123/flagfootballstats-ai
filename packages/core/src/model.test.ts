@@ -7,7 +7,7 @@ const play = (id: string, ts: number, d: Partial<PlayData>): GameEvent => ({ id,
 
 describe('ticker model', () => {
   it('summary of the latest event', () => {
-    expect(playSummary({ unit: 'offense', type: 'pass', lineup: L, player_id: 'b', pass_result: 'catch', result: 'first_down' }, lookup)).toBe('Pass, #96 Daniel Binder, First Down');
+    expect(playSummary({ unit: 'offense', type: 'pass', lineup: L, player_id: 'b', pass_result: 'catch', result: 'first_down' }, lookup)).toBe('Pass, #96 Daniel Binder, First down');
   });
 
   it('derives score, clock, entries and stats in one go', () => {

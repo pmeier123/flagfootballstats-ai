@@ -1,4 +1,8 @@
-import type { Occasion } from '@ffs/core';
+import { fieldLabel, type Occasion, type PlayField } from '@ffs/core';
+
+// Short labels for the compact capture form.
+const SHORT_FIELD_LABELS: Partial<Record<PlayField, string>> = { failed_puller_ids: 'Missed pulls', xp_result: 'Extra point' };
+export const playFieldLabel = (f: PlayField): string => SHORT_FIELD_LABELS[f] ?? fieldLabel(f);
 
 export const OCCASIONS: { value: Occasion; label: string }[] = [
   { value: 'dffl_game', label: 'DFFL-Spiel' },

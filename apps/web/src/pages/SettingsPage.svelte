@@ -65,10 +65,10 @@
 <div class="card">
   <h2 style="margin-top:0">Verbindung und Sicherung</h2>
   <p data-testid="sync-text">{app.sync.message}</p>
-  {#if app.backendConfigured}
-    <p>Angemeldet als <b>{app.user?.email ?? '–'}</b> ({app.user?.role}).</p>
+  {#if app.backendConfigured && app.user}
+    <p>Angemeldet als <b>{app.user.email ?? '–'}</b> ({app.user.role}).</p>
     <div class="row"><button type="button" onclick={syncNow}>Jetzt synchronisieren</button><button type="button" onclick={signOut}>Abmelden</button></div>
-  {:else}
+  {:else if !app.backendConfigured}
     <div class="banner warn">Keine Server-Verbindung eingerichtet: Die App läuft vollständig lokal auf diesem Gerät. Live-Ticker, Mehrgeräte-Betrieb und Google-Sheets-Export sind nicht aktiv. Bitte regelmäßig ein Backup herunterladen.</div>
   {/if}
 </div>
@@ -106,13 +106,15 @@
   </div>
 {/if}
 
-<div class="card">
-  <h2 style="margin-top:0">Backup</h2>
-  <div class="row">
-    <button type="button" onclick={backup} data-testid="backup">Backup herunterladen (JSON)</button>
-    <label class="btn" style="display:inline-flex;align-items:center">Backup einspielen<input type="file" accept="application/json,.json" hidden onchange={restore} /></label>
+{#if app.user && (!app.backendConfigured || app.user.role !== 'viewer')}
+  <div class="card">
+    <h2 style="margin-top:0">Backup</h2>
+    <div class="row">
+      <button type="button" onclick={backup} data-testid="backup">Backup herunterladen (JSON)</button>
+      <label class="btn" style="display:inline-flex;align-items:center">Backup einspielen<input type="file" accept="application/json,.json" hidden onchange={restore} /></label>
+    </div>
   </div>
-</div>
+{/if}
 
 <div class="card">
   <h2 style="margin-top:0">Darstellung</h2>

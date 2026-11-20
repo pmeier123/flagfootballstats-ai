@@ -15,7 +15,8 @@
   initApp().catch((e) => { failed = e instanceof Error ? e.message : String(e); });
 
   let isAdmin = $derived(app.user?.role === 'admin');
-  let canUse = $derived(!!app.user && (!app.backendConfigured || app.user.role !== 'viewer' || route.name === 'settings'));
+  // Settings stays reachable without a session: it hosts the login form.
+  let canUse = $derived(route.name === 'settings' || (!!app.user && (!app.backendConfigured || app.user.role !== 'viewer')));
   const active = (n: string) => (route.name === n || (n === 'home' && ['game', 'capture', 'preview'].includes(route.name)) ? 'nav active' : 'nav');
 </script>
 
